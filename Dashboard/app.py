@@ -208,7 +208,7 @@ with tab1:
         (f"{_sf}_reporters",      _rep_default_sf),
         (f"{_sf}_tags",           _all_tags_sf),
         (f"{_sf}_partner_region", "All"),
-        (f"{_sf}_partners",       _all_partners_sf),
+        (f"{_sf}_partners",       []),
     ]:
         if _k not in st.session_state:
             st.session_state[_k] = _v
@@ -282,17 +282,16 @@ with tab1:
             with fc4:
                 _ov_pt_key = f"{_fk}_ov_partners"
                 _sf_pt = [p for p in st.session_state.get(f"{_sf}_partners", []) if p in partners_in_scope]
-                if not _sf_pt:
-                    _sf_pt = partners_in_scope
                 st.session_state[_ov_pt_key] = _sf_pt
                 sel_partners = st.multiselect("Partner", partners_in_scope,
                     key=_ov_pt_key,
                     on_change=_sync_to_sf, args=(_ov_pt_key, f"{_sf}_partners"))
 
+        _active_pt_ov = [p for p in sel_partners if p in partners_in_scope] or partners_in_scope
         mask = (
             df["REPORTER"].isin(sel_reporters or reporters_in_scope)
             & df["REGION"].isin(sel_regions)
-            & df["PARTNER"].isin(sel_partners or partners_in_scope)
+            & df["PARTNER"].isin(_active_pt_ov)
         )
         if all_tags:
             mask &= df["COMMODITY_TAG"].isin(sel_tags or all_tags)
@@ -838,7 +837,6 @@ with tab1:
         )
         with dest_fc5:
             _dd_pt_sf = [p for p in st.session_state.get(f"{_sf}_partners", []) if p in _dest_partners_scope]
-            if not _dd_pt_sf: _dd_pt_sf = _dest_partners_scope
             st.session_state[f"{_fk}_dest_partners"] = _dd_pt_sf
             dest_partners = st.multiselect("Partners", _dest_partners_scope,
                 key=f"{_fk}_dest_partners",
@@ -866,8 +864,9 @@ with tab1:
         )
         _dest_active_months = dest_month_sel if dest_month_sel else MONTH_ORDER
 
+        _active_pt_dd = [p for p in dest_partners if p in _dest_partners_scope] or _dest_partners_scope
         _dest_mask_base = (
-            _dest_df_rep["PARTNER"].isin(dest_partners or _dest_partners_scope)
+            _dest_df_rep["PARTNER"].isin(_active_pt_dd)
             & _dest_df_rep["CROP_YEAR"].isin(dest_active_cy)
             & _dest_df_rep["CROP_MONTH_NUM"].isin([MONTH_ORDER.index(m) + 1 for m in _dest_active_months])
         )
